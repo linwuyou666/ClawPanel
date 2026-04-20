@@ -1,4 +1,4 @@
-PRO_VERSION ?= 5.4.5
+PRO_VERSION ?= 5.5.0
 LITE_VERSION ?= 0.3.5
 BINARY := clawpanel
 EDITION ?= pro
