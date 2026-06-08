@@ -1944,7 +1944,7 @@ function AgentsPage() {
     }
     const preferredFile = selectedAgentCoreFiles.find(file => file.name === 'IDENTITY.md' && file.exists) || selectedAgentCoreFiles.find(file => file.exists) || selectedAgentCoreFiles.find(file => file.name === 'IDENTITY.md');
     const currentSelected = selectedAgentCoreFiles.find(file => file.name === selectedCoreFileName);
-    const nextSelected = (!currentSelected || !currentSelected.exists) ? (preferredFile || selectedAgentCoreFiles[0]) : currentSelected;
+    const nextSelected = !currentSelected ? (preferredFile || selectedAgentCoreFiles[0]) : currentSelected;
     const nextContent = nextSelected.content || '';
     if (!allowReset && (nextSelected.name !== selectedCoreFileName || nextContent !== coreFileDraft)) return;
     if (nextSelected.name !== selectedCoreFileName) {

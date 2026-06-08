@@ -1719,7 +1719,7 @@ export default function Channels() {
       setSwitchingQQBotVariant(false);
     }
   };
-  // === QQ Login handlers ===
+  // === QR Login handlers ===
   const handleQRLogin = async (channelId = currentDef?.id || selectedChannel) => {
     setLoginChannelId(channelId);
     setLoginModal('qrcode');
@@ -1742,15 +1742,25 @@ export default function Channels() {
         return;
       }
 
-      const r = await api.napcatGetQRCode();
-      if (r.ok && r.data?.qrcode) {
-        setQrImg(r.data.qrcode);
-        startQrPolling('qq');
-      } else if (r.message?.includes('Logined') || r.data?.message?.includes('Logined')) {
-        setLoginMsg('QQ 已登录，无需重复登录');
-      } else {
-        setLoginMsg(r.message || r.data?.message || r.error || '获取二维码失败');
+      // QQ / NapCat 通道使用 NapCat OneBot 扫码登录
+      if (channelId === 'qq') {
+        const r = await api.napcatGetQRCode();
+        if (r.ok && r.data?.qrcode) {
+          setQrImg(r.data.qrcode);
+          startQrPolling('qq');
+        } else if (r.message?.includes('Logined') || r.data?.message?.includes('Logined')) {
+          setLoginMsg('QQ 已登录，无需重复登录');
+        } else {
+          setLoginMsg(r.message || r.data?.message || r.error || '获取二维码失败');
+        }
+        return;
       }
+
+      // WhatsApp、Telegram、Signal 等配对型通道通过 OpenClaw pairing 机制接入，
+      // 无需面板提供二维码，用户需通过聊天 App 发起配对请求。
+      const pairingLabel = currentDef?.label || channelId;
+      setLoginModal(null);
+      setLoginMsg(`${pairingLabel} 通过 OpenClaw 配对机制接入，无需面板扫码。请在聊天 App 中向 Bot 发送消息以发起配对请求，然后在面板中批准即可。`);
     } catch (err) {
       setLoginMsg((channelId === 'openclaw-weixin' ? '获取微信二维码失败: ' : '获取二维码失败: ') + String(err));
     } finally {
@@ -1776,13 +1786,19 @@ export default function Channels() {
         return;
       }
 
-      const r = await api.napcatRefreshQRCode();
-      if (r.ok && r.data?.qrcode) {
-        setQrImg(r.data.qrcode);
-        startQrPolling('qq');
-      } else {
-        setLoginMsg(r.data?.message || '刷新失败');
+      if (currentLoginChannelId === 'qq') {
+        const r = await api.napcatRefreshQRCode();
+        if (r.ok && r.data?.qrcode) {
+          setQrImg(r.data.qrcode);
+          startQrPolling('qq');
+        } else {
+          setLoginMsg(r.data?.message || '刷新失败');
+        }
+        return;
       }
+
+      // 非 QQ/微信通道无需刷新二维码
+      setLoginMsg('当前通道不支持刷新二维码');
     } catch { setLoginMsg('刷新失败'); }
     finally { setQrLoading(false); }
   };
