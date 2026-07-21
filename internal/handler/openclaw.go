@@ -477,6 +477,7 @@ func GetChannelCatalog() gin.HandlerFunc {
 }
 
 func syncCronJobs(cfg *config.Config, ocConfig map[string]interface{}) {
+	// Read from gateway
 	cmd := exec.Command("openclaw", "cron", "list", "--json")
 	output, err := cmd.Output()
 	if err != nil {
@@ -486,17 +487,49 @@ func syncCronJobs(cfg *config.Config, ocConfig map[string]interface{}) {
 	if err := json.Unmarshal(output, &rawResult); err != nil {
 		return
 	}
-	jobs, _ := rawResult["jobs"].([]interface{})
-	if jobs == nil {
-		jobs = []interface{}{}
+	gwJobs, _ := rawResult["jobs"].([]interface{})
+	if gwJobs == nil {
+		gwJobs = []interface{}{}
 	}
-	cronMap, ok := ocConfig["cron"].(map[string]interface{})
-	if !ok || cronMap == nil {
-		cronMap = map[string]interface{}{}
-		ocConfig["cron"] = cronMap
+	// Build gateway ID set
+	gwIDs := map[string]bool{}
+	for _, j := range gwJobs {
+		if m, ok := j.(map[string]interface{}); ok {
+			if id, ok := m["id"].(string); ok && id != "" {
+				gwIDs[id] = true
+			}
+		}
 	}
-	cronMap["jobs"] = jobs
+	// Remove from gateway what was removed from panel
+	panelRaw, _ := ocConfig["cron"].(map[string]interface{})
+	if panelRaw != nil {
+		if panelList, ok := panelRaw["jobs"].([]interface{}); ok {
+			for _, j := range gwJobs {
+				if m, ok := j.(map[string]interface{}); ok {
+					if id, ok := m["id"].(string); ok && id != "" {
+						found := false
+						for _, pj := range panelList {
+							if pm, ok := pj.(map[string]interface{}); ok {
+								if pid, ok := pm["id"].(string); ok && pid == id {
+									found = true
+									break
+								}
+							}
+						}
+						if !found {
+							exec.Command("openclaw", "cron", "rm", id).Run()
+						}
+					}
+				}
+			}
+		}
+	}
+	// Update panel with gateway data
+	ocConfig["cron"] = map[string]interface{}{
+		"jobs": gwJobs,
+	}
 }
+
 func normalizeOpenClawCompatConfig(ocConfig map[string]interface{}) {
 	if ocConfig == nil {
 		return
