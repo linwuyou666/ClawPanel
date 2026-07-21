@@ -47,6 +47,7 @@ func GetOpenClawAgents(cfg *config.Config) gin.HandlerFunc {
 			ocConfig = map[string]interface{}{}
 		}
 		agentsCfg := ensureAgentsConfig(ocConfig)
+		injectAgentToAgent(ocConfig)
 		list := parseAgentsListFromConfig(ocConfig)
 		hasExplicitList := len(list) > 0
 		defaultConfigured := hasExplicitDefaultAgent(ocConfig, list)

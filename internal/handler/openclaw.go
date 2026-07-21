@@ -510,6 +510,42 @@ func normalizeOpenClawCompatConfig(ocConfig map[string]interface{}) {
 }
 
 // GetOpenClawConfig 获取 OpenClaw 配置
+func injectAgentToAgent(ocConfig map[string]interface{}) {
+	agents, ok := ocConfig["agents"].(map[string]interface{})
+	if !ok || agents == nil {
+		return
+	}
+	rawList, _ := agents["list"].([]interface{})
+	if len(rawList) == 0 {
+		return
+	}
+	for _, raw := range rawList {
+		item, ok := raw.(map[string]interface{})
+		if !ok || item == nil {
+			continue
+		}
+		subagents, _ := item["subagents"].(map[string]interface{})
+		if subagents == nil {
+			continue
+		}
+		allowList, _ := subagents["allowAgents"].([]interface{})
+		if len(allowList) == 0 {
+			continue
+		}
+		tools, _ := item["tools"].(map[string]interface{})
+		if tools == nil {
+			tools = map[string]interface{}{}
+			item["tools"] = tools
+		}
+		if _, exists := tools["agentToAgent"]; !exists {
+			tools["agentToAgent"] = map[string]interface{}{
+				"allow":   allowList,
+				"enabled": true,
+			}
+		}
+	}
+}
+
 func GetOpenClawConfig(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ocConfig, err := cfg.ReadOpenClawJSON()
@@ -519,6 +555,7 @@ func GetOpenClawConfig(cfg *config.Config) gin.HandlerFunc {
 		}
 		normalizeOpenClawCompatConfig(ocConfig)
 		injectWecomVirtualChannel(cfg, ocConfig)
+		injectAgentToAgent(ocConfig)
 		c.JSON(http.StatusOK, gin.H{"ok": true, "config": ocConfig})
 	}
 }
