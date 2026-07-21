@@ -465,6 +465,8 @@ func buildOpenClawChannelCatalog() []openClawChannelCatalogItem {
 	return list
 }
 
+
+
 func GetChannelCatalog() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -474,6 +476,27 @@ func GetChannelCatalog() gin.HandlerFunc {
 	}
 }
 
+func syncCronJobs(cfg *config.Config, ocConfig map[string]interface{}) {
+	cmd := exec.Command("openclaw", "cron", "list", "--json")
+	output, err := cmd.Output()
+	if err != nil {
+		return
+	}
+	var rawResult map[string]interface{}
+	if err := json.Unmarshal(output, &rawResult); err != nil {
+		return
+	}
+	jobs, _ := rawResult["jobs"].([]interface{})
+	if jobs == nil {
+		jobs = []interface{}{}
+	}
+	cronMap, ok := ocConfig["cron"].(map[string]interface{})
+	if !ok || cronMap == nil {
+		cronMap = map[string]interface{}{}
+		ocConfig["cron"] = cronMap
+	}
+	cronMap["jobs"] = jobs
+}
 func normalizeOpenClawCompatConfig(ocConfig map[string]interface{}) {
 	if ocConfig == nil {
 		return

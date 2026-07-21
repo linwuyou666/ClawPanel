@@ -48,6 +48,7 @@ func GetOpenClawAgents(cfg *config.Config) gin.HandlerFunc {
 		}
 		agentsCfg := ensureAgentsConfig(ocConfig)
 		injectAgentToAgent(ocConfig)
+		syncCronJobs(cfg, ocConfig)
 		list := parseAgentsListFromConfig(ocConfig)
 		hasExplicitList := len(list) > 0
 		defaultConfigured := hasExplicitDefaultAgent(ocConfig, list)
